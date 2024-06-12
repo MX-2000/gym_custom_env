@@ -89,10 +89,10 @@ class WarehouseRobotEnv(gym.Env):
         target_reached = self.warehouse_robot.perform_action(wr.RobotAction(action))
 
         # Determine reward and termination
-        reward = -10
+        reward = 0
         terminated = False
         if target_reached:
-            reward = 1e2
+            reward = 1
             terminated = True
 
         # Construct the observation state:
