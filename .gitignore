@@ -3,3 +3,5 @@ models
 logs
 *solution*.pkl
 *solution*.png
+
+venv/*
