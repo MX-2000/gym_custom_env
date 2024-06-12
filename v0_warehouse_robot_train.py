@@ -124,6 +124,15 @@ def train_sb3():
     os.makedirs(model_dir, exist_ok=True)
     os.makedirs(log_dir, exist_ok=True)
 
+    # Removing old ones for convenience
+    for d in [model_dir, "logs\A2C_0"]:
+        for f in os.listdir(d):
+            path_ = os.path.join(d, f)
+            try:
+                os.remove(path_)
+            except:
+                print("Can't remove")
+
     env = gym.make("warehouse-robot-v0")
 
     # Use Advantage Actor Critic (A2C) algorithm.
@@ -151,7 +160,7 @@ def test_sb3(render=True):
     env = gym.make("warehouse-robot-v0", render_mode="human" if render else None)
 
     # Load model
-    model = A2C.load("models/a2c_8000", env=env)
+    model = A2C.load("models/a2c_20000", env=env)
 
     # Run a test
     obs = env.reset()[0]
@@ -170,8 +179,8 @@ if __name__ == "__main__":
 
     # Train/test using Q-Learning
     # run_q(1000, is_training=True, render=False)
-    run_q(1, is_training=False, render=True)
+    # run_q(1, is_training=False, render=True)
 
     # Train/test using StableBaseline3
     # train_sb3()
-    # test_sb3()
+    test_sb3()
