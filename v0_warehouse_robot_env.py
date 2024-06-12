@@ -43,7 +43,7 @@ class WarehouseRobotEnv(gym.Env):
 
         # Gym requires defining the observation space. The observation space consists of the robot's and target's set of possible positions.
         # The observation space is used to validate the observation returned by reset() and step().
-        # Use a 1D vector: [robot_row_pos, robot_col_pos, target_row_pos, target_col_pos]
+        # Use a 1D vector: [robot_row_pos, robot_col_pos, target_row_pos, target_col_pos, obtacle_row_pos, obstacle_col_pos]
         self.observation_space = spaces.Box(
             low=0,
             high=np.array(
@@ -52,9 +52,11 @@ class WarehouseRobotEnv(gym.Env):
                     self.grid_cols - 1,
                     self.grid_rows - 1,
                     self.grid_cols - 1,
+                    self.grid_cols - 1,
+                    self.grid_cols - 1,
                 ]
             ),
-            shape=(4,),
+            shape=(6,),
             dtype=np.int32,
         )
 
@@ -70,7 +72,11 @@ class WarehouseRobotEnv(gym.Env):
         # Construct the observation state:
         # [robot_row_pos, robot_col_pos, target_row_pos, target_col_pos]
         obs = np.concatenate(
-            (self.warehouse_robot.robot_pos, self.warehouse_robot.target_pos)
+            (
+                self.warehouse_robot.robot_pos,
+                self.warehouse_robot.target_pos,
+                self.warehouse_robot.obstacle_pos,
+            )
         )
 
         # Additional info to return. For debugging or whatever.
@@ -98,7 +104,11 @@ class WarehouseRobotEnv(gym.Env):
         # Construct the observation state:
         # [robot_row_pos, robot_col_pos, target_row_pos, target_col_pos]
         obs = np.concatenate(
-            (self.warehouse_robot.robot_pos, self.warehouse_robot.target_pos)
+            (
+                self.warehouse_robot.robot_pos,
+                self.warehouse_robot.target_pos,
+                self.warehouse_robot.obstacle_pos,
+            )
         )
 
         # Additional info to return. For debugging or whatever.
@@ -126,13 +136,13 @@ if __name__ == "__main__":
     check_env(env.unwrapped)
     print("Check environment end")
 
-    # # Reset environment
-    # obs = env.reset()[0]
+    # Reset environment
+    obs = env.reset()[0]
 
-    # # Take some random actions
-    # while(True):
-    #     rand_action = env.action_space.sample()
-    #     obs, reward, terminated, _, _ = env.step(rand_action)
+    # Take some random actions
+    while True:
+        rand_action = env.action_space.sample()
+        obs, reward, terminated, _, _ = env.step(rand_action)
 
-    #     if(terminated):
-    #         obs = env.reset()[0]
+        if terminated:
+            obs = env.reset()[0]
