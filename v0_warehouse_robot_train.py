@@ -18,12 +18,14 @@ def run_q(episodes, is_training=True, render=False):
     env = gym.make("warehouse-robot-v0", render_mode="human" if render else None)
 
     if is_training:
-        # If training, initialize the Q Table, a 5D vector: [robot_row_pos, robot_row_col, target_row_pos, target_col_pos, actions]
+        # If training, initialize the Q Table, a 7D vector: [robot_row_pos, robot_row_col, target_row_pos, target_col_pos, obtacle_row_pos, obstacle_col_pos, actions]
         q = np.zeros(
             (
                 env.unwrapped.grid_rows,
                 env.unwrapped.grid_cols,
                 env.unwrapped.grid_rows,
+                env.unwrapped.grid_cols,
+                env.unwrapped.grid_cols,
                 env.unwrapped.grid_cols,
                 env.action_space.n,
             )
@@ -168,8 +170,8 @@ if __name__ == "__main__":
 
     # Train/test using Q-Learning
     # run_q(1000, is_training=True, render=False)
-    # run_q(1, is_training=False, render=True)
+    run_q(1, is_training=False, render=True)
 
     # Train/test using StableBaseline3
-    train_sb3()
+    # train_sb3()
     # test_sb3()
