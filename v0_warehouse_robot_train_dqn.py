@@ -224,7 +224,7 @@ class WarehouseDQN:
 
 
 if __name__ == "__main__":
-    frozen_lake = WarehouseDQN()
+    warehouse_bot = WarehouseDQN()
     is_slippery = True
-    frozen_lake.train(1000, is_slippery=is_slippery)
-    # frozen_lake.test(4, is_slippery=is_slippery)
+    warehouse_bot.train(1000, is_slippery=is_slippery)
+    # warehouse_bot.test(4, is_slippery=is_slippery)
