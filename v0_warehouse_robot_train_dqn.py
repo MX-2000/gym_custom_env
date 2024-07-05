@@ -5,6 +5,7 @@ from collections import deque
 import random
 import tensorflow as tf
 import tensorflow.keras.layers as tfl
+import v0_warehouse_robot_env
 
 
 # Memory for experience replay
