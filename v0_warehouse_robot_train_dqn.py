@@ -128,7 +128,7 @@ class WarehouseDQN:
         env.close()
 
         # Save policy
-        policy_dqn.save("frozen_lake_dql.keras")
+        policy_dqn.save("warehouse_dqn.keras")
 
         # Create new graph
         plt.figure(1)
@@ -145,7 +145,7 @@ class WarehouseDQN:
         plt.plot(epsilon_history)
 
         # Save plots
-        plt.savefig("frozen_lake_dql.png")
+        plt.savefig("warehouse_dqn.png")
 
     def state_to_dqn_input(self, state: int, num_states: int):
         input_tensor = np.zeros(num_states)
@@ -203,7 +203,7 @@ class WarehouseDQN:
         num_actions = env.action_space.n
 
         # Load learned policy
-        policy_dqn = tf.keras.models.load_model("frozen_lake_dql.keras")
+        policy_dqn = tf.keras.models.load_model("warehouse_dqn.keras")
 
         for i in range(episodes):
             state = env.reset()[0]  # Initialize to state 0
