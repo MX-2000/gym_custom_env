@@ -52,7 +52,7 @@ class WarehouseRobotEnv(gym.Env):
                     self.grid_cols - 1,
                     self.grid_rows - 1,
                     self.grid_cols - 1,
-                    self.grid_cols - 1,
+                    self.grid_rows - 1,
                     self.grid_cols - 1,
                 ]
             ),

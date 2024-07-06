@@ -25,11 +25,13 @@ class ReplayMemory:
 
 class WarehouseDQN:
     # Hyperparameters
-    learning_rate = 0.01
-    mini_batch_size = 128
+    learning_rate = 0.001
+    mini_batch_size = 1024  # How often do we optimize the network
     gamma = 0.9
-    target_update_freq = 32
-    replay_memory_size = 1024
+    target_update_freq = 256  # How often do we copy
+    replay_memory_size = 50000  # Size of the replay memory
+    epsilon_end = 0.1
+    epsilon_decay = 0.995
 
     def __init__(self) -> None:
         self.memory = ReplayMemory(self.replay_memory_size)
@@ -38,7 +40,8 @@ class WarehouseDQN:
 
     def create_q_model(self, input_dim, output_dim):
         model = tf.keras.Sequential()
-        model.add(tfl.Dense(input_shape=[input_dim], units=24, activation="relu"))
+        model.add(tfl.Dense(input_shape=[input_dim], units=64, activation="relu")),
+        model.add(tfl.Dense(64, activation="relu")),
         model.add(tfl.Dense(output_dim, activation="linear"))
         model.compile(optimizer=self.optimizer, loss=self.loss_function)
         return model
@@ -48,7 +51,7 @@ class WarehouseDQN:
             "warehouse-robot-v0",
             render_mode="human" if render else None,
         )
-        self.num_states = env.observation_space.n
+        self.num_states = env.observation_space.shape[0]
         self.num_actions = env.action_space.n
 
         policy_dqn = self.create_q_model(self.num_states, self.num_actions)
@@ -69,12 +72,17 @@ class WarehouseDQN:
         # Track the number of steps for the robot to find the target.
         steps_per_episode = np.zeros(episodes)
 
+        print(f"Initialization done, with {episodes} episodes")
+
         for i in range(episodes):
+            print(f"Episode {i}, epsilon {epsilon}")
             state = env.reset()[0]  # Initialize to state 0
+            print(state)
 
             terminated = False  # True when agent falls in hole or reached goal
             truncated = False  # True when agent takes more than 200 actions
-
+            steps_to_complete = 0
+            j = 0
             # Agent navigates map until it falls into hole/reaches goal (terminated), or has taken 200 actions (truncated).
             while not terminated and not truncated:
                 # Select action based on epsilon-greedy
@@ -91,9 +99,15 @@ class WarehouseDQN:
                         training=False,
                     )
                     action = np.argmax(q_values[0])
+                    print(f"Taking greedy action: {action}")
 
                 # Execute action
                 new_state, reward, terminated, truncated, _ = env.step(action)
+                print(f"Execute action: {action}, new_state:\n{new_state}")
+                if j > 2:
+                    return
+
+                j += 1
 
                 # Save experience into memory
                 self.memory.append((state, action, new_state, reward, terminated))
@@ -104,8 +118,11 @@ class WarehouseDQN:
                 # Increment step counter
                 step_count += 1
 
+                steps_to_complete += 1
+
             # Keep track of the rewards collected per episode
             if reward == 1:
+                print(f"Steps to complete the episode: {steps_to_complete}")
                 rewards_per_episode[i] = 1
 
             # Check if enough experience has been collected and if at least 1 reward has been collected
@@ -113,18 +130,20 @@ class WarehouseDQN:
                 len(self.memory) > self.mini_batch_size
                 and np.sum(rewards_per_episode) > 0
             ):
+                print(f"Optimizing, memory len = {len(self.memory)}")
                 mini_batch = self.memory.sample(self.mini_batch_size)
                 self.optimize(mini_batch, policy_dqn, target_dqn)
 
                 # Decay epsilon
-                epsilon = max(epsilon - 1 / episodes, 0)
+                epsilon = max(epsilon * self.epsilon_decay, self.epsilon_end)
                 epsilon_history.append(epsilon)
 
                 # Copy policy network to target network after a certain number of steps
                 if step_count > self.target_update_freq:
+                    print("Copying weights")
                     target_dqn.set_weights(policy_dqn.get_weights())
                     step_count = 0
-
+        print(f"Episodes overn")
         # Close environment
         env.close()
 
@@ -185,6 +204,7 @@ class WarehouseDQN:
 
         with tf.GradientTape() as tape:
             q_values = policy_dqn(states)
+            # print(f"Q values during optimization: {q_values}")
             q_action = tf.reduce_sum(q_values * masks, axis=1)
             loss = self.loss_function(target_qs, q_action)
 
@@ -199,7 +219,7 @@ class WarehouseDQN:
             render_mode="human",
         )
 
-        num_states = env.observation_space.n
+        num_states = env.observation_space.shape[0]
         num_actions = env.action_space.n
 
         # Load learned policy
@@ -227,5 +247,5 @@ class WarehouseDQN:
 if __name__ == "__main__":
     warehouse_bot = WarehouseDQN()
     is_slippery = True
-    warehouse_bot.train(1000, is_slippery=is_slippery)
+    warehouse_bot.train(500, is_slippery=is_slippery)
     # warehouse_bot.test(4, is_slippery=is_slippery)
