@@ -26,12 +26,12 @@ class ReplayMemory:
 class WarehouseDQN:
     # Hyperparameters
     learning_rate = 0.001
-    mini_batch_size = 1024  # How often do we optimize the network
-    gamma = 0.9
-    target_update_freq = 256  # How often do we copy
-    replay_memory_size = 50000  # Size of the replay memory
+    mini_batch_size = 128  # How often do we optimize the network
+    gamma = 0.99
+    target_update_freq = 128  # How often do we copy
+    replay_memory_size = 1000  # Size of the replay memory
     epsilon_end = 0.1
-    epsilon_decay = 0.995
+    epsilon_decay = 0.99
 
     def __init__(self) -> None:
         self.memory = ReplayMemory(self.replay_memory_size)
@@ -40,13 +40,13 @@ class WarehouseDQN:
 
     def create_q_model(self, input_dim, output_dim):
         model = tf.keras.Sequential()
-        model.add(tfl.Dense(input_shape=[input_dim], units=64, activation="relu")),
-        model.add(tfl.Dense(64, activation="relu")),
+        model.add(tfl.Dense(input_shape=[input_dim], units=64, activation="relu"))
+        # model.add(tfl.Dense(64, activation="relu")),
         model.add(tfl.Dense(output_dim, activation="linear"))
         model.compile(optimizer=self.optimizer, loss=self.loss_function)
         return model
 
-    def train(self, episodes, render=False, is_slippery=False):
+    def train(self, episodes, render=False):
         env = gym.make(
             "warehouse-robot-v0",
             render_mode="human" if render else None,
@@ -77,7 +77,7 @@ class WarehouseDQN:
         for i in range(episodes):
             print(f"Episode {i}, epsilon {epsilon}")
             state = env.reset()[0]  # Initialize to state 0
-            print(state)
+            # print(state)
 
             terminated = False  # True when agent falls in hole or reached goal
             truncated = False  # True when agent takes more than 200 actions
@@ -93,21 +93,35 @@ class WarehouseDQN:
                     )  # actions: 0=left,1=down,2=right,3=up
                 else:
                     # Select best action
-                    state_dqn_input = self.state_to_dqn_input(state, self.num_states)
-                    q_values = policy_dqn(
-                        tf.convert_to_tensor([state_dqn_input], dtype=tf.float32),
-                        training=False,
-                    )
+                    # print(f"STate: {state}")
+                    # print(
+                    #     f"Reshaped: {tf.convert_to_tensor(state.reshape(1,6), dtype=tf.float32)}"
+                    # )
+                    # state_dqn_input = self.state_to_dqn_input(state, self.num_states)
+                    # print(f"State dqn input: {state_dqn_input}")
+                    # print(
+                    #     f"Tensor rep: {tf.convert_to_tensor([state_dqn_input], dtype=tf.float32)}"
+                    # )
+                    # q_values = policy_dqn(
+                    #     tf.convert_to_tensor([state_dqn_input], dtype=tf.float32),
+                    #     training=False,
+                    # )
+                    # q_values = policy_dqn(
+                    #     tf.convert_to_tensor(state.reshape(1, 6), dtype=tf.float32),
+                    #     training=False,
+                    # )
+                    q_values = policy_dqn.predict(state.reshape(1, 6), verbose=0)
+                    # print(q_values)
                     action = np.argmax(q_values[0])
-                    print(f"Taking greedy action: {action}")
+                    print(f"Taking greedy action: {action} in state: {state}")
 
                 # Execute action
                 new_state, reward, terminated, truncated, _ = env.step(action)
-                print(f"Execute action: {action}, new_state:\n{new_state}")
-                if j > 2:
-                    return
+                # print(f"Execute action: {action}, new_state:\n{new_state}")
+                # if j > 25:
+                #     return
 
-                j += 1
+                # j += 1
 
                 # Save experience into memory
                 self.memory.append((state, action, new_state, reward, terminated))
@@ -180,15 +194,19 @@ class WarehouseDQN:
         # states = np.vstack([self.state_to_dqn_input(s, self.num_states) for s in states])
         # new_states = np.vstack([self.state_to_dqn_input(ns, self.num_states) for ns in new_states])
 
-        states = tf.convert_to_tensor(
-            np.vstack([self.state_to_dqn_input(s, self.num_states) for s in states]),
-            dtype=tf.float32,
-        )
+        # states = tf.convert_to_tensor(
+        #     np.vstack([self.state_to_dqn_input(s, self.num_states) for s in states]),
+        #     dtype=tf.float32,
+        # )
+        states = tf.convert_to_tensor(np.vstack([s for s in states]))
+        # new_states = tf.convert_to_tensor(
+        #     np.vstack(
+        #         [self.state_to_dqn_input(ns, self.num_states) for ns in new_states]
+        #     ),
+        #     dtype=tf.float32,
+        # )
         new_states = tf.convert_to_tensor(
-            np.vstack(
-                [self.state_to_dqn_input(ns, self.num_states) for ns in new_states]
-            ),
-            dtype=tf.float32,
+            np.vstack([ns for ns in new_states]), dtype=tf.float32
         )
 
         # future_qs = target_dqn(new_states, training=False).numpy().max(axis=1)
@@ -204,6 +222,7 @@ class WarehouseDQN:
 
         with tf.GradientTape() as tape:
             q_values = policy_dqn(states)
+            # print(f"Shape of q_values: {q_values.shape}")
             # print(f"Q values during optimization: {q_values}")
             q_action = tf.reduce_sum(q_values * masks, axis=1)
             loss = self.loss_function(target_qs, q_action)
@@ -212,7 +231,7 @@ class WarehouseDQN:
         self.optimizer.apply_gradients(zip(grads, policy_dqn.trainable_variables))
 
     # Run the FrozeLake environment with the learned policy
-    def test(self, episodes, is_slippery=False):
+    def test(self, episodes):
         # Create FrozenLake instance
         env = gym.make(
             "warehouse-robot-v0",
@@ -236,7 +255,10 @@ class WarehouseDQN:
                 tensor = tf.convert_to_tensor(
                     [self.state_to_dqn_input(state, num_states)], dtype=tf.float32
                 )
-                action = tf.argmax(policy_dqn(tensor)[0]).numpy()
+
+                action = tf.argmax(
+                    policy_dqn(tensor)[0]
+                ).numpy()  # TODO change here how we transform our state
 
                 # Execute action
                 state, reward, terminated, truncated, _ = env.step(action)
@@ -246,6 +268,5 @@ class WarehouseDQN:
 
 if __name__ == "__main__":
     warehouse_bot = WarehouseDQN()
-    is_slippery = True
-    warehouse_bot.train(500, is_slippery=is_slippery)
-    # warehouse_bot.test(4, is_slippery=is_slippery)
+    warehouse_bot.train(500)
+    # warehouse_bot.test(4)
